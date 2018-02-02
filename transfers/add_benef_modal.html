@@ -1,0 +1,192 @@
+<div class="modal-header light-main-color-bg">
+    <button type="button" class="close" ng-click="cancel()">&times;</button>
+    <h5 class="modal-title text-white text-bold" translate="add_beneficiary"></h5>
+</div>
+<div class="modal-body account-info-modal padding-bottom-0" id="modal-add-benef-body">
+
+    <div class="container-fluid container-fullw bg-white">
+
+        <h6 class="margin-top-20 margin-bottom-0 margin-right-30 margin-left-30 bold" translate="enter_benef_details">
+            Please enter your beneficiary details
+        </h6>
+        <table class="bill-form" id="modal-benef-table">
+            <tr class="bill-form">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="nickname"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'benef_nickname_placeholder' | translate }}" ng-model="benef.nickname" id="benef-nickname-input" />
+                </td>
+            </tr>
+            <tr class="bill-form">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="first_name"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'benef_fname_placeholder' | translate}}" ng-model="benef.rcpt_first_name" ng-disabled="waiting" id="benef-fname-input" />
+                </td>
+            </tr>
+            <tr class="bill-form">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="last_name"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'benef_lname_placeholder' | translate }}" ng-model="benef.rcpt_last_name" ng-disabled="waiting" id="benef-lname-input" />
+                </td>
+            </tr>
+
+            <!-- I know swift Code -->
+            <tr class="bill-form" ng-show="paymentType.code == 'intl_benef'">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="swift_known"></h5>
+                </td>
+                <td class="form-input">
+                    <switch ng-model="swift.known" class="ubq-switch" id="estatement-toggle" ng-change="knowSwiftToggled()" ng-disabled="waiting"></switch>
+                </td>
+            </tr>
+
+            <!-- SWIFT CODE -->
+            <tr class="bill-form" ng-show="paymentType.code == 'intl_benef'" ng-if="swift.known">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="swift_code"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'swift_code_placeholder' | translate }}" ng-model="swift.code" ng-change="swiftSelected()" ng-disabled="!swift.known || waiting" id="benef-lname-input" />
+                </td>
+            </tr>
+
+            <!-- Country -->
+            <tr class="bill-form" ng-show="paymentType.code == 'intl_benef'">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="bank_country"></h5>
+                </td>
+                <td class="form-data" ng-show="countries.length == 1" id="benef-bank-label">
+                    {{beneficiaryCountryName}}
+                </td>
+                <td class="form-input" ng-show="countries.length > 1" id="benef-bank-list">
+                    <ui-select ng-model="beneficiaryCountry" ng-change="countrySelected(beneficiaryCountry)" ng-disabled="swift.known || waiting" theme="selectize">
+                        <ui-select-match placeholder="{{'select_country' | translate}}">
+                            {{$select.selected.country_name}}
+                        </ui-select-match>
+                        <ui-select-choices repeat="item in countries | filter: $select.search">
+                            <div ng-bind-html="item.country_name | highlight: $select.search"></div>
+                            <small ng-bind-html="item.country_code | highlight: $select.search"></small>
+                        </ui-select-choices>
+                    </ui-select>
+                </td>
+            </tr>
+
+            <!-- bank name -->
+            <tr class="bill-form">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="bank_name">Bank Name</h5>
+                </td>
+                <td class="form-data" ng-show="banks.length == 1" id="benef-bank-label">
+                    {{beneficiaryBankName}}
+                </td>
+                <td class="form-input" ng-show="banks.length > 1" id="benef-bank-list">
+                    <ui-select ng-model="beneficiaryBank" ng-change="bankSelected(beneficiaryBank)" theme="selectize" ng-disabled="(paymentType.code == 'intl_benef' && !(countrySelect && !swift.known)) || waiting">
+                        <ui-select-match placeholder="{{'select_bank' | translate}}">
+                            {{$select.selected.name}}
+                        </ui-select-match>
+                        <ui-select-choices repeat="item in banks | filter: $select.search">
+                            <div ng-bind-html="item.name | highlight: $select.search"></div>
+                            <small ng-bind-html="item.bic | highlight: $select.search"></small>
+                        </ui-select-choices>
+                    </ui-select>
+                </td>
+            </tr>
+
+            <!-- IBAN -->
+            <tr class="bill-form" ng-show="benef.country.iban && paymentType.code == 'intl_benef'">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="iban"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'iban_placeholder' | translate}}" ng-model="benef.account_number" ng-disabled="waiting" id="benef-account-no-input" />
+                </td>
+            </tr>
+
+            <!-- Account Number -->
+            <tr class="bill-form" ng-show="(!benef.country.iban || paymentType.code != 'intl_benef') && beneficiaryBankName">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="account_number"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'benef_account_number_placeholder' | translate}}" ng-model="benef.account_number" ng-disabled="waiting" maxlength="{{accNoMaxLength}}" id="benef-account-no-input" />
+                </td>
+            </tr>
+
+            <!-- routing code -->
+            <tr class="bill-form" ng-show="(benef.country && !benef.country.iban && paymentType.code == 'intl_benef') && beneficiaryBankName">
+                <td class="form-label">
+                    <h5 class="bold uppercase">{{benef.country.routing_code}}</h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'routing_code_placeholder'| translate}} {{benef.country.routing_code}}" ng-model="benef.routing_code" ng-disabled="waiting" id="benef-account-no-input" />
+                </td>
+            </tr>
+
+            <!-- Address 1 -->
+            <tr class="bill-form" ng-show="paymentType.code == 'intl_benef'">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="address_1"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'address_placeholder' | translate}}" ng-model="benef.rcpt_address_1" ng-disabled="waiting" id="benef-account-no-input" maxlength="35" required />
+                </td>
+            </tr>
+
+            <!-- Address 2 -->
+            <tr class="bill-form" ng-show="paymentType.code == 'intl_benef'">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="address_2"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'address_placeholder' | translate}}" ng-model="benef.rcpt_address_2" ng-disabled="waiting" id="benef-account-no-input" maxlength="35" />
+                </td>
+            </tr>
+
+            <!-- Address 3 -->
+            <tr class="bill-form" ng-show="paymentType.code == 'intl_benef'">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="address_3"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'address_placeholder' | translate}}" ng-model="benef.rcpt_address_3" ng-disabled="waiting" id="benef-account-no-input" maxlength="35" />
+                </td>
+            </tr>
+
+
+            <tr class="bill-form" ng-show="paymentType.code != 'intl_benef'">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="currency">Currency</h5>
+                </td>
+                <td class="form-data">
+                    {{benef.currency}}
+                </td>
+            </tr>
+            <tr ng-show="errorMsg" class="center">
+                <td colspan="2">
+                    <div class="has-error padding-top-10" ng-click="errorMsg = ''">
+                        <label> {{errorMsg}} </label>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="center padding-top-10" ng-if="benefDisclaimer">
+            {{benefDisclaimer}}
+        </div>
+
+    </div>
+
+</div>
+<div class="modal-footer center">
+    <div class="center margin-bottom-10" ng-show="waiting">
+        <img src="assets/images/ajax-loader.gif" style="width: 40px;" />
+    </div>
+
+    <button class="btn btn-cancel text-bold" ng-click="cancel()" translate="cancel" id="benef-cancel-btn"></button>
+    <button class="btn btn-confirm text-bold" ng-click="save()" translate="save" id="benef-save-btn"></button>
+</div>

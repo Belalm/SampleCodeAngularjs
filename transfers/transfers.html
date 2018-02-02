@@ -1,0 +1,497 @@
+<div class="container-fluid container-fullw padding-bottom-10" id="payment-screen" ng-controller="TransferCtrl">
+
+    <!-- start: Progress bar steps indicator -->
+    <div class="progressbar-container">
+        <ul class="progressbar">
+            <li ng-class="{1:'active',2:'done', 3:'done'}[step]"><span translate="payment_details">payment details</span></li>
+            <li ng-class="{1:'',2:'active', 3:'done'}[step]"><span translate="confirm">confirm</span></li>
+        </ul>
+    </div>
+    <div class="progressindicator-container">
+        <ul class="progressindicator">
+            <li ng-class="{'active':step==1}">
+                <span class="indicator"></span>
+            </li>
+            <li ng-class="{'active':step==2}">
+                <span class="indicator"></span>
+            </li>
+        </ul>
+    </div>
+    <!-- end: Progress bar steps indicator -->
+
+    <div class="panel-white no-border padding-30 padding-top-0">
+        <div class="row">
+
+            <!-- start: Payment type selector -->
+            <div class="col-xs-12 col-sm-12 padding-top-30 center" ng-show="step == 1 || step == 2">
+                <h4 class="bold" ng-show="step == 1"> {{titleMsg}} </h4>
+
+                <div class="payment-type-selector" ng-class="{'payment-type-selector-with-bulk': hasBulkTransfer, 'payment-type-selector': !hasBulkTransfer}">
+                    <button ng-repeat="type in paymentTypes" type="button" class="btn btn-wide" ng-class="{'active': paymentType.code == type.code}" ng-click="paymentTypeChanged(type); fromAccountFiltered=null; clearErrorMsg()" ng-show="step == 1 || (paymentType.code == type.code && step == 2)"
+                        id="transfer-{{type.code}}-btn">
+                    <span>
+                        <img ng-class="{'image-bulk-height': hasBulkTransfer}" ng-src="{{'assets/images/transfer/transfer_'+type.code+'.png'}}" />
+                    </span>
+                    <br><br>
+                    <span class="bold uppercase" translate="{{type.displayNameCode}}"></span>
+                </button>
+                </div>
+            </div>
+            <!-- end: Payment type selector -->
+
+            <div class="col-xs-12 col-sm-offset-2 col-sm-8 padding-top-30 center bottom-border-grey" ng-show="step == 2">
+                <h4 class="" translate="transfer_details_please_confirm" id="payment-confirm-msg"> Below are your transfer details, please confirm your transfer </h4>
+                <h3 class="bold" translate="transfer_to_pay"></h3>
+            </div>
+            <div class="col-xs-12 col-sm-offset-2 col-sm-8 margin-top-10 center bottom-border-grey" ng-show="step == 3">
+                <img ng-src="{{'assets/images/transfer-status-'+transferStatus+'.png'}}" ng-if="transferStatus">
+                <h5 class="bold margin-top-20"> {{transferSuccessMsg}} </h5>
+                <h4 class="bold margin-bottom-20" id="payment-status-msg"> {{'transfer'| translate}} {{'transfer_status_'+transferStatus | translate}}: <span class="main-color-text"> {{transferAmount | currency:transferCurrency}}</span></h4>
+            </div>
+
+            <div class="center" ng-show="pageLoading">
+                <img src="assets/images/ajax-loader.gif" style="padding-top: 50px;width: 40px;" />
+            </div>
+
+            <div ng-show="step == 1 && !pageLoading">
+
+                <!-- select from account -->
+                <div class="col-xs-12 col-sm-offset-2 col-sm-8 payments-account-selection">
+
+                    <h5 class="bold">
+                        <i class="fa fa-credit-card circle-border main-color-text"></i>
+                        <span translate="from_which_account"> From which account </span>
+                    </h5>
+                    <div ng-show="fromAccountFiltered.length" id="transfer-from-account-dropdown">
+                        <ui-select ng-model="select.fromAcc" on-select="chooseFromAccount($item)" theme="selectize">
+                            <ui-select-match placeholder="{{'from_which_account' | translate}}">
+                                {{$select.selected.displayedName}}
+                            </ui-select-match>
+                            <ui-select-choices repeat="item in fromAccountFiltered | filter: $select.search">
+                                <div ng-bind-html="item.displayedName | highlight: $select.search"></div>
+                                <div><small ng-bind-html="item.displayedValue | highlight: $select.search"></small></div>
+                                <small ng-bind-html="item.info1 | highlight: $select.search"></small>
+                            </ui-select-choices>
+                        </ui-select>
+                    </div>
+                    <div ng-show="fromAccountFiltered.length == 0">
+                        {{paymentType.fromEmptyMsg}}
+                    </div>
+                    <table class="bill-form margin-top-30" ng-if="fromAccount">
+                        <tr class="bill-form" ng-repeat="item in fromAccount.previewData">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" ng-show="item.label">{{item.label}}</h5>
+                                <h5 class="bold uppercase" translate="{{item.labelCode}}" ng-show="!item.label" id="transfer-from-label-{{item.id}}"></h5>
+                            </td>
+                            <td class="form-data">
+                                <h5>{{item.displayedValue}}</h5>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="clearfix"></div>
+
+                <!-- select to account -->
+                <div class="col-xs-12 col-sm-offset-2 col-sm-8 payments-bill-selection">
+                    <h5 ng-if="paymentType.code === 'bulk' && !jsonBulk.length">{{bulk_instruction}}</h5>
+
+                    <h5 class="bold title-with-add-button">
+                        <i class="fa fa-newspaper-o circle-border main-color-text"></i>
+                        <span translate="{{paymentType.toCriteria.titleCode}}"></span>
+                        <!-- Add -->
+                        <span class="pull-right" style="margin:5px" id="add-benef-btn"><small translate="add" ng-if="paymentType.toCriteria.canAdd" class="bold"></small></span>
+                        <span class="fa-stack main-color-text fa-1x pull-right clickable" ng-click="addBenef(paymentType)" ng-if="paymentType.toCriteria.canAdd"><i class="fa fa-circle fa-stack-2x"></i><i class="fa fa-plus-square-o fa-stack-1x fa-inverse"></i></span>
+                        <!-- Upload/Download -->
+                        <span class="pull-right" style="margin:5px" id="add-benef-btn"><small translate="download-template" ng-if="paymentType.toCriteria.canDownload" class="bold"></small></span>
+                        <span class="fa-stack main-color-text fa-1x pull-right clickable" ng-click="downloadDocument()" ng-if="paymentType.toCriteria.canDownload"><i class="fa fa-circle fa-stack-2x"></i><i class="fa fa-download fa-stack-1x fa-inverse"></i></span>
+                        <!-- UPLOAD IMAGE -->
+                        <div nv-file-drop="" uploader="uploader" class="btn btn-o btn-file pull-right" ng-if="paymentType.toCriteria.canUpload" style="margin-top: -8px;">
+                            <input type="file" nv-file-select="" uploader="uploader" accept=".csv" multiple />
+                            <span class="pull-right" style="margin:5px" id="add-benef-btn"><small translate="upload" ng-if="paymentType.toCriteria.canUpload" class="bold"></small></span>
+                            <span class="fa-stack main-color-text fa-1x pull-right clickable" ng-if="paymentType.toCriteria.canUpload"><i class="fa fa-circle fa-stack-2x"></i><i class="fa fa-upload fa-stack-1x fa-inverse"></i></span>
+                        </div>
+                    </h5>
+                    <div ng-show="toAccountFiltered.length" id="transfer-to-account-dropdown">
+                        <ui-select ng-model="select.toAcc" on-select="chooseToAccount($item)" theme="selectize">
+                            <ui-select-match placeholder="{{paymentType.toCriteria.titleCode | translate}}">
+                                {{$select.selected.displayedName}}
+                            </ui-select-match>
+                            <ui-select-choices repeat="item in toAccountFiltered | filter: $select.search" ui-disable-choice="item.status != 'A'">
+                                <table style="width: 100%;">
+                                    <tr>
+                                        <td ng-click="chooseToAccount(item)" ng-disabled="item.status != 'A'">
+                                            <div ng-bind-html="item.displayedName | highlight: $select.search"></div>
+                                            <div ng-show="item.displayedValue"><small ng-bind-html="item.displayedValue | highlight: $select.search"></small></div>
+                                            <small ng-bind-html="item.info1 | highlight: $select.search"></small>
+                                        </td>
+                                        <td ng-show="paymentType.toCriteria.canEdit" ng-click="editBenef(item)" class="clickable edit" ng-disabled="item.status != 'A'">
+                                            <small translate="edit_benef_tooltip"></small>
+                                            <i class="fa fa-edit"></i>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </ui-select-choices>
+                        </ui-select>
+                    </div>
+                    <div ng-show="toAccountFiltered.length == 0">
+                        {{paymentType.toCriteria.emptyMsg}}
+                    </div>
+
+                    <div class="has-success padding-top-10 padding-bottom-10 clickable" ng-show="success.editBenefMsg" ng-click="success.editBenefMsg = null">{{success.editBenefMsg}}</div>
+                    <div class="has-error padding-top-10 padding-bottom-10 clickable" ng-show="error.editBenefMsg" ng-click="error.editBenefMsg = null">{{error.editBenefMsg}}</div>
+
+                    <table class="bill-form margin-top-30" ng-if="toAccount">
+                        <tr class="bill-form" ng-repeat="item in toAccount.previewData">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" ng-show="item.label">{{item.label}}</h5>
+                                <h5 class="bold uppercase" translate="{{item.labelCode}}" ng-show="!item.label" id="transfer-to-label-{{item.id}}"></h5>
+                            </td>
+                            <td class="form-data">
+                                <h5>{{item.displayedValue}}</h5>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <h5 class="has-error clickable" ng-show="error.editBenefMsg" ng-click="error.editBenefMsg = null" ng-repeat="err in bulkErrorMessages">Error at input "{{err.value}}": {{err.message}} </h5>
+
+                    <div class="bill-form-container validated margin-top-30" ng-if="paymentType.code === 'bulk' && jsonBulk.length">
+                        <table class="bill-form">
+                            <tr class="bill-form header">
+                                <td class="form-label bold" translate="amount"></td>
+                                <td class="form-label bold" translate="beneficiary_account"></td>
+                                <td class="form-label bold" translate="beneficiary_bank"></td>
+                                <td class="form-label bold" translate="beneficiary_name"></td>
+                                <td class="form-label bold" translate="transaction_purpose"></td>
+                                <td class="form-label bold" translate="remarks"></td>
+                            </tr>
+                            <tr class="bill-form" ng-repeat="trf in jsonBulk">
+                                <td class="form-data" ng-class="{'bulk-content-error': trf.verification[trf.Amount]}">
+                                    <span uib-tooltip="{{trf.verification[trf.Amount]}}" tooltip-placement="top"> 
+                                    {{trf.Amount}}
+                                </span>
+                                </td>
+                                <td class="form-data" ng-class="{'bulk-content-error': trf.verification[trf['Beneficiary Account Number']]}">
+                                    <span uib-tooltip="{{trf.verification[trf['Beneficiary Account Number']]}}" tooltip-placement="top"> 
+                                    {{trf['Beneficiary Account Number']}}
+                                </span>
+                                </td>
+                                <td class="form-data" ng-class="{'bulk-content-error': trf.verification[trf['Beneficiary Bank Code']]}">
+                                    <span uib-tooltip="{{trf.verification[trf['Beneficiary Bank Code']]}}" tooltip-placement="top"> 
+                                    {{trf['Beneficiary Bank Code']}}
+                                </span>
+                                </td>
+                                <td class="form-data" ng-class="{'bulk-content-error': trf.verification[trf['Beneficiary Name']]}">
+                                    <span uib-tooltip="{{trf.verification[trf['Beneficiary Name']]}}" tooltip-placement="top"> 
+                                    {{trf['Beneficiary Name']}}
+                                </span>
+                                </td>
+                                <td class="form-data" ng-class="{'bulk-content-error': trf.verification[trf['Transaction Purpose']]}">
+                                    <span uib-tooltip="{{trf.verification[trf['Transaction Purpose']]}}" tooltip-placement="top"> 
+                                    {{trf['Transaction Purpose']}}
+                                </span>
+                                </td>
+                                <td class="form-data" ng-class="{'bulk-content-error': trf.verification[trf.Remarks]}">
+                                    <span uib-tooltip="{{trf.verification[trf.Remarks]}}" tooltip-placement="top"> 
+                                    {{trf.Remarks}}
+                                </span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                </div>
+                <div class="clearfix"></div>
+
+                <!-- Additional Details -->
+                <div class="col-xs-12 col-sm-offset-2 col-sm-8 payments-bill-selection">
+                    <h5 class="bold">
+                        <i class="fa fa-usd circle-border main-color-text"></i>
+
+                        <span translate="additional_details"></span>
+                    </h5>
+                    <table class="bill-form">
+                        <tr class="bill-form" ng-show="paymentType.code != 'bulk'">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" translate="amount">amount</h5>
+                            </td>
+                            <td class="form-input">
+                                <input type="text" class="form-control" placeholder="{{'amount_placeholder' | translate}}" ng-model="transferAmount" ng-change="amountChanged()" />
+                            </td>
+                        </tr>
+                        <tr class="bill-form" ng-if="currencies">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" translate="currency">currency</h5>
+                            </td>
+                            <td class="form-data" ng-if="currencies.length == 1">
+                                {{transferCurrency}}
+                            </td>
+                            <td class="form-input" ng-if="currencies.length != 1" id="payment-currency-list">
+                                <select class="cs-select cs-skin-elastic" ng-model="transferCurrency" ng-change="currencySelected(transferCurrency)">
+                                <option value="" disabled selected translate="currency"></option>
+                                <option ng-repeat="item in currencies" ng-value="item" ng-bind="item"></option>
+                            </select>
+                            </td>
+                        </tr>
+                        <tr class="bill-form" ng-if="reasons" ng-hide="hideReason">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" translate="reason">reason</h5>
+                            </td>
+                            <td class="form-input" id="transfer-reason-list">
+                                <!-- <select class="cs-select cs-skin-elastic" ng-model="transferReason" ng-change="reasonSelected(transferReason)">
+                                <option value="" disabled selected translate="select_reason_placeholder"></option>
+                                <option ng-repeat="item in reasons" ng-value="item.string_id" ng-bind="item.string_local"></option>
+                            </select> -->
+                                <ui-select ng-model="transferReason" on-select="reasonSelected($item.string_id)" theme="selectize">
+                                    <ui-select-match placeholder="{{'select_reason_placeholder' | translate}}">
+                                        {{$select.selected.string_local}}
+                                    </ui-select-match>
+                                    <ui-select-choices repeat="item in reasons | orderBy:'string_local' | filter: $select.search">
+                                        <table style="width: 100%;">
+                                            <tr>
+                                                <td ng-click="reasonSelected(item.string_id)" id="transfer-reason-{{item.string_id}}">
+                                                    <div ng-bind-html="item.string_local | highlight: $select.search"></div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </ui-select-choices>
+                                </ui-select>
+                            </td>
+                        </tr>
+                        <tr class="bill-form" ng-show="transferReason == 'other'">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" translate="custom_reason">custom reason</h5>
+                            </td>
+                            <td class="form-input">
+                                <input type="text" class="form-control" placeholder="{{'custom_reason_placeholder' | translate}}" maxlength="35" ng-model="transferCustomReason" />
+                            </td>
+                        </tr>
+                        <!-- Share Type -->
+                        <tr class="bill-form" ng-show="paymentType.code==='intl_benef' && !hideReason">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" translate="share_type">share_type</h5>
+                            </td>
+                            <td class="form-input" id="transfer-share-type-list">
+                                <ui-select ng-model="transferShareType" on-select="shareTypeSelected($item)" theme="selectize">
+                                    <ui-select-match placeholder="{{ 'select_share_type_placeholder' | translate}}">
+                                        {{$select.selected.name}}
+                                    </ui-select-match>
+                                    <ui-select-choices repeat="item in share_types | filter: $select.search">
+                                        <table style="width: 100%;">
+                                            <tr>
+                                                <td ng-click="shareTypeSelected(item)" id="transfer-share-type-{{item.value}}">
+                                                    <div ng-bind-html="item.name | highlight: $select.search"></div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </ui-select-choices>
+                                </ui-select>
+                            </td>
+                        </tr>
+                        <!-- <tr class="bill-form">
+                        <td class="form-label">
+                            <h5 class="bold uppercase" translate="notes">Notes</h5>
+                        </td>
+                        <td class="form-input">
+                            <input type="text" class="form-control" placeholder="{{ 'notes_placeholder' | translate}}" ng-model="transferNotes"/>
+                        </td>
+                    </tr> -->
+                    </table>
+                </div>
+                <div class="clearfix"></div>
+            </div>
+
+            <div ng-show="(step==2 || step==3 ) && !pageLoading">
+
+                <!-- from account -->
+                <div class="col-xs-12 col-sm-offset-2 col-sm-8 payments-account-selection">
+
+                    <h5 class="bold">
+                        <i class="fa fa-credit-card circle-border main-color-text"></i>
+                        <span translate="transfer_from_account"> From account </span>
+                    </h5>
+                    <table class="bill-form margin-top-30">
+                        <tr class="bill-form" ng-repeat="item in fromAccount.previewData">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" ng-show="item.label">{{item.label}}</h5>
+                                <h5 class="bold uppercase" translate="{{item.labelCode}}" ng-show="!item.label" id="transfer-confirm-from-label-{{item.id}}"></h5>
+                            </td>
+                            <td class="form-data {{item.ngClass}}">
+                                <h5>{{item.displayedValue}}</h5>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="clearfix"></div>
+
+                <!-- to account -->
+                <div class="col-xs-12 col-sm-offset-2 col-sm-8 payments-bill-selection" ng-if="paymentType.code != 'bulk'">
+
+                    <h5 class="bold" ng-if="paymentType.toCriteria.data=='accounts'">
+                        <i class="fa fa-newspaper-o circle-border main-color-text"></i>
+
+                        <span translate="transfer_to_account"> Transfer To Account </span>
+                    </h5>
+
+                    <h5 class="bold" ng-if="paymentType.toCriteria.data=='beneficiaries'">
+                        <i class="fa fa-newspaper-o circle-border main-color-text"></i>
+
+                        <span translate="transfer_beneficiary"> Transfer Beneficiary </span>
+                    </h5>
+
+                    <table class="bill-form margin-top-30">
+                        <tr class="bill-form" ng-repeat="item in toAccount.previewData">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" ng-show="item.label">{{item.label}}</h5>
+                                <h5 class="bold uppercase" translate="{{item.labelCode}}" ng-show="!item.label" id="transfer-confirm-to-label-{{item.id}}"></h5>
+                            </td>
+                            <td class="form-data">
+                                <h5>{{item.displayedValue}}</h5>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- FOR BULK TRANSFER -->
+                <div class="col-xs-12 col-sm-offset-2 col-sm-8 payments-bill-selection" ng-if="paymentType.code === 'bulk' && jsonBulk.length">
+
+                    <h5 class="bold" ng-if="jsonBulk.length">
+                        <i class="fa fa-newspaper-o circle-border main-color-text"></i>
+                        <span translate="transfer_to_accounts"> Transfer To Accounts </span>
+                    </h5>
+                    <table class="bill-form">
+                        <tr class="bill-form header">
+                            <td class="form-label bold" translate="amount"></td>
+                            <td class="form-label bold" translate="beneficiary_account"></td>
+                            <td class="form-label bold" translate="beneficiary_bank"></td>
+                            <td class="form-label bold" translate="beneficiary_name"></td>
+                            <td class="form-label bold" translate="transaction_purpose"></td>
+                            <td class="form-label bold" translate="remarks"></td>
+                        </tr>
+                        <tr class="bill-form" ng-repeat="trf in jsonBulk" ng-class="{'bill-success': trf.returned_status === 'C', 'bill-error': trf.returned_status === 'F', 'bill-warning': trf.returned_status === 'P'}">
+                            <td class="form-data">{{trf.Amount}}</td>
+                            <td class="form-data">{{trf['Beneficiary Account Number']}}</td>
+                            <td class="form-data">{{trf['Beneficiary Bank Code']}}</td>
+                            <td class="form-data">{{trf['Beneficiary Name']}}</td>
+                            <td class="form-data">{{trf['Transaction Purpose']}}</td>
+                            <td class="form-data">{{trf['Remarks']}}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="clearfix"></div>
+
+                <!-- Additional Details -->
+                <div class="col-xs-12 col-sm-offset-2 col-sm-8 payments-bill-selection">
+                    <h5 class="bold">
+                        <i class="fa fa-usd circle-border main-color-text"></i>
+
+                        <span translate="additional_details"> Additional Details </span>
+                    </h5>
+                    <table class="bill-form">
+                        <tr class="bill-form">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" translate="amount"> Amount </h5>
+                            </td>
+                            <td class="form-data">
+                                <h5 class="bold margin-bottom-0 main-color-text" ng-show="transferAmount">{{transferAmount | currency:transferCurrency}}</h5>
+                            </td>
+                        </tr>
+                        <!-- BEGINNING For bulk Transfer -->
+                        <tr class="bill-form" ng-show="showAddFees">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" translate="additional_fees"></h5>
+                            </td>
+                            <td class="form-data">
+                                <h5 class="bold margin-bottom-0 main-color-text">{{transfer_fees | currency:transferCurrency}}</h5>
+                            </td>
+                        </tr>
+                        <tr class="bill-form" ng-show="showAddFees">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" translate="total_amount">total_amount</h5>
+                            </td>
+                            <td class="form-data">
+                                <h5 class="bold margin-bottom-0 main-color-text">{{total_amount | currency:transferCurrency}}</h5>
+                            </td>
+                        </tr>
+                        <!-- END For bulk Transfer -->
+                        <tr class="bill-form">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" translate="payment_date"> Payment date </h5>
+                            </td>
+                            <td class="form-data">
+                                <h5 class="margin-bottom-0">On {{todayDate | date}}</h5>
+                            </td>
+                        </tr>
+                        <tr class="bill-form" ng-hide="hideReason">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" translate="reason">reason</h5>
+                            </td>
+                            <td class="form-data">
+                                <h5 class="margin-bottom-0">{{transferReasonObj.string_local}}</h5>
+                            </td>
+                        </tr>
+                        <tr class="bill-form" ng-show="transferReasonObj.string_id=='other'">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" translate="custom_reason">custom reason</h5>
+                            </td>
+                            <td class="form-data">
+                                <h5 class="margin-bottom-0">{{transferCustomReason}}</h5>
+                            </td>
+                        </tr>
+                        <tr class="bill-form" ng-show="!hideReason && paymentType.code ==='intl_benef'">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" translate="share_type">share_type</h5>
+                            </td>
+                            <td class="form-data">
+                                <h5 class="margin-bottom-0">{{transferShareTypeName}}</h5>
+                            </td>
+                        </tr>
+                        <tr class="bill-form" ng-show="transferNotes">
+                            <td class="form-label">
+                                <h5 class="bold uppercase" translate="notes">Notes</h5>
+                            </td>
+                            <td class="form-data">
+                                {{transferNotes}}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="col-xs-12 col-sm-12 padding-top-30 center">
+                <div class="has-error padding-top-10" ng-click="error.step1Msg=''" ng-show="error.step1Msg && step==1">
+                    <label> {{error.step1Msg}} </label>
+                </div>
+                <div class="has-error padding-top-10" ng-click="error.step2Msg=''" ng-show="error.step2Msg && step==2">
+                    <label> {{error.step2Msg}} </label>
+                </div>
+                <div class="padding-top-20" ng-show="transferDisclaimer">
+                    {{transferDisclaimer}}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="panel-white padding-30 center payment-form-footer">
+        <div class="center padding-bottom-10" ng-show="waitingTrf">
+            <img src="assets/images/ajax-loader.gif" style="width: 40px;" />
+        </div>
+
+        <button type="button" class="btn btn-cancel btn-wide text-bold" ng-click="cancel()" ng-if="step==1 || step>2" ng-disabled="!(fromAccount && toAccount && transferCurrency && transferAmount && (transferReason || hideReason))" id="payment-cancel-btn">
+            <span translate="cancel" ng-if="step == 1"> cancel </span>
+            <span translate="done" ng-if="step > 2"> done </span>
+        </button>
+
+        <button type="button" class="btn btn-wide btn-main-color text-bold" ng-if="step == 1" ng-disabled="!(fromAccount && toAccount && transferCurrency && transferAmount && (transferReason || hideReason)  && (paymentType.code != 'bulk' || (paymentType.code === 'bulk' && !jsonBulk.hasError)))"
+            translate="next" ng-click="next()" id="payment-next-btn">
+            Next
+        </button>
+
+        <button type="button" class="btn btn-wide btn-cancel text-bold" ng-if="step == 2" translate="back" ng-click="back()" ng-disabled="waitingTrf" id="payment-back-btn">
+            back
+        </button>
+
+        <button type="button" class="btn btn-wide btn-main-color text-bold" ng-if="step == 2" translate="confirm" ng-click="confirm()" ng-disabled="waitingTrf" id="payment-confirm-btn">
+            confirm
+        </button>
+    </div>
+
+</div>

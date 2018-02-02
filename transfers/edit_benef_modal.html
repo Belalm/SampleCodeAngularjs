@@ -1,0 +1,149 @@
+<div class="modal-header light-main-color-bg">
+    <button type="button" class="close" ng-click="cancel()">&times;</button>
+    <h5 class="modal-title text-white text-bold" translate="beneficiary_info"></h5>
+</div>
+<div class="modal-body account-info-modal padding-bottom-0">
+
+    <div class="container-fluid container-fullw bg-white">
+
+        <h6 class="margin-top-20 margin-bottom-0 margin-right-30 margin-left-30 bold" translate="enter_benef_details">
+            Please enter your beneficiary details
+        </h6>
+        <table class="bill-form" id="modal-benef-table">
+            <tr class="bill-form">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="nickname"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'benef_nickname_placeholder' | translate }}" ng-model="benef.nickname" id="benef-nickname-input" />
+                </td>
+            </tr>
+            <tr class="bill-form">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="first_name"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'benef_fname_placeholder' | translate}}" ng-model="benef.rcpt_first_name" ng-disabled="waiting" id="benef-fname-input" />
+                </td>
+            </tr>
+            <tr class="bill-form">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="last_name"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'benef_lname_placeholder' | translate }}" ng-model="benef.rcpt_last_name" ng-disabled="waiting" id="benef-lname-input" />
+                </td>
+            </tr>
+
+            <!-- Bank Country -->
+            <tr class="bill-form" ng-show="benef.type == 'I'">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="bank_country"></h5>
+                </td>
+                <td class="form-data">
+                    {{countryName}}
+                </td>
+            </tr>
+
+            <tr class="bill-form">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="bank_name">Bank Name</h5>
+                </td>
+                <td class="form-data">
+                    <!-- <select class="cs-select cs-skin-elastic" ng-options="item.bic as item.name for item in banks" ng-model="beneficiaryBank" ng-change="bankSelected(beneficiaryBank)"> -->
+                    <!-- </select> -->
+                    {{benef.bank.name}}
+                </td>
+            </tr>
+            <!-- IBAN -->
+            <tr class="bill-form" ng-show="benef.bank_country.country_iban && benef.type == 'I'">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="iban"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'iban_placeholder' | translate}}" ng-model="benef.account_number" ng-disabled="waiting" id="benef-account-no-input" />
+                </td>
+            </tr>
+            <!-- Account Number -->
+            <tr class="bill-form" ng-show="(benef.type == 'I' && !benef.bank_country.country_iban) || benef.type != 'I'">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="account_number"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'benef_account_number_placeholder' | translate}}" ng-model="benef.account_number" ng-disabled="waiting" id="benef-account-no-input" />
+                </td>
+            </tr>
+            <!-- routing code -->
+            <tr class="bill-form" ng-show="!benef.bank_country.country_iban && benef.type == 'I'">
+                <td class="form-label">
+                    <h5 class="bold uppercase">{{benef.bank_country.country_routing_code}}</h5>
+                </td>
+                <td class="form-data">
+                    <!-- <input type="text" class="form-control" placeholder="{{'rounting_code_placeholder'| translate}} {{benef.bank_country.country_routing_code}}" ng-model="benef.routing_code" ng-disabled="waiting" id="benef-account-no-input" />-->
+                    {{benef.routing_code}}
+                </td>
+            </tr>
+            <!-- Address 1 -->
+            <tr class="bill-form" ng-show="benef.type == 'I'">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="address_1"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'address_placeholder' | translate}}" ng-model="benef.rcpt_address_1" ng-disabled="waiting" id="benef-account-no-input" maxlength="35" />
+                </td>
+            </tr>
+
+            <!-- Address 2 -->
+            <tr class="bill-form" ng-show="benef.type == 'I'">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="address_2"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'address_placeholder' | translate}}" ng-model="benef.rcpt_address_2" ng-disabled="waiting" id="benef-account-no-input" maxlength="35" />
+                </td>
+            </tr>
+
+            <!-- Address 3 -->
+            <tr class="bill-form" ng-show="benef.type == 'I'">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="address_3"></h5>
+                </td>
+                <td class="form-input">
+                    <input type="text" class="form-control" placeholder="{{'address_placeholder' | translate}}" ng-model="benef.rcpt_address_3" ng-disabled="waiting" id="benef-account-no-input" maxlength="35" />
+                </td>
+            </tr>
+
+            <tr class="bill-form" ng-show="benef.type != 'I'">
+                <td class="form-label">
+                    <h5 class="bold uppercase" translate="currency">Currency</h5>
+                </td>
+                <td class="form-data">
+                    {{benef.currency}}
+                </td>
+            </tr>
+
+            <tr ng-show="errorMessage" class="center">
+                <td colspan="2">
+                    <div class="has-error padding-top-10" ng-click="errorMessage = ''">
+                        <label> {{errorMessage}} </label>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="center padding-top-10">
+            {{benefDisclaimer}}
+        </div>
+
+    </div>
+
+</div>
+<div class="modal-footer center">
+    <div class="center margin-bottom-10" ng-show="waiting">
+        <img src="assets/images/ajax-loader.gif" style="width: 40px;" />
+    </div>
+
+    <button class="btn btn-cancel text-bold" ng-click="cancel()" translate="cancel" id="benef-cancel-btn"></button>
+    <button class="btn btn-danger text-bold" ng-click="delete()" translate="delete" id="benef-delete-btn"></button>
+    <button class="btn btn-confirm text-bold" ng-click="save()" translate="save" id="benef-save-btn"></button>
+</div>
